@@ -17,7 +17,15 @@
     "lib": [
       "es2018",
       "dom"
-    ]
+    ],
+    "paths": {
+      "pf-google-maps": [
+        "dist/pf-google-maps"
+      ],
+      "pf-google-maps/*": [
+        "dist/pf-google-maps/*"
+      ]
+    }
   },
   "angularCompilerOptions": {
     "fullTemplateTypeCheck": true,

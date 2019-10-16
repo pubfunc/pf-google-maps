@@ -1,0 +1,78 @@
+<div class="map">
+  <pf-google-map *ngIf="isMapActive">
+      <pf-zoom-control *ngIf="isZoomActive" [(ngModel)]="zoom"></pf-zoom-control>
+      <pf-pan-control *ngIf="isPanActive" [(ngModel)]="pan"></pf-pan-control>
+
+      <pf-marker *ngIf="isMarkerActive" [(ngModel)]="markerPosition" [animation]="markerAnimation">
+
+          <pf-info-window *ngIf="isInfoWindowActive">
+              <div *pfInfoTemplate style="max-width: 260px;">
+                  <h1>{{ infoWindowText }}</h1>
+                  <p>
+                      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+                      Nullam vel arcu accumsan, aliquet nisi lobortis, consequat
+                      odio. In tortor diam, porta a sodales quis, egestas a sapien.
+                  </p>
+                  <input type="text" [(ngModel)]="infoWindowText">
+              </div>
+          </pf-info-window>
+      </pf-marker>
+
+      <pf-marker *ngFor="let control of markerArrayControl.controls" [animation]="markerAnimation" [formControl]="control"></pf-marker>
+
+
+      <pf-polygon [formControl]="polygonControl" [geodesic]="polygonGeodesic"></pf-polygon>
+
+  </pf-google-map>
+  <ng-template #nothingHere>
+      <div>Nothing to see here</div>
+  </ng-template>
+</div>
+<div class="debug">
+  <label>
+      <input type="checkbox" [(ngModel)]="isMapActive">
+      <span>Map</span>
+  </label>
+  <label>
+      <input type="checkbox" [(ngModel)]="isZoomActive">
+      <span>Zoom&nbsp;{{ zoom }}</span>
+      <input type="number" [(ngModel)]="zoom">
+      <button type="button" (click)="zoomControl.increment()">+</button>
+      <button type="button" (click)="zoomControl.decrement()">-</button>
+  </label>
+  <label>
+      <input type="checkbox" [(ngModel)]="isPanActive">
+      <span>Pan</span>
+      <button type="button" (click)="panControl.panNorth()">N</button>
+      <button type="button" (click)="panControl.panEast()">E</button>
+      <button type="button" (click)="panControl.panSouth()">S</button>
+      <button type="button" (click)="panControl.panWest()">W</button>
+      <code>{{ pan | json }}</code>
+  </label>
+  <label>
+      <input type="checkbox" [(ngModel)]="isMarkerActive">
+      <span>Marker</span>
+      <code>{{ markerPosition | json }}</code>
+  </label>
+  <label>
+      <input type="checkbox" [(ngModel)]="isInfoWindowActive">
+      <span>InfoWindow</span>
+      <input type="text" [(ngModel)]="infoWindowText">
+  </label>
+  <label>
+      <span>Marker Array</span>
+      <select [(ngModel)]="markerAnimation">
+          <option value="none">None</option>
+          <option value="bounce">Bounce</option>
+          <option value="drop">Drop</option>
+      </select>
+      <app-control-debug [control]="markerArrayControl"></app-control-debug>
+      <code>{{ markerArrayControl.value | json }}</code>
+  </label>
+  <label>
+      <span>Polygon</span>
+      <app-control-debug [control]="polygonControl"></app-control-debug>
+      <code>{{ polygonControl.value | json }}</code>
+  </label>
+  <div>Geodesic<input type="checkbox" [(ngModel)]="polygonGeodesic"></div>
+</div>
