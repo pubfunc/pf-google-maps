@@ -20,10 +20,10 @@
     ],
     "paths": {
       "pf-google-maps": [
-        "dist/pf-google-maps"
+        "src/lib"
       ],
       "pf-google-maps/*": [
-        "dist/pf-google-maps/*"
+        "src/lib/*"
       ]
     }
   },
