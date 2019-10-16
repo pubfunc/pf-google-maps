@@ -1,4 +1,4 @@
-import { NgModule } from "@angular/core";
+import { NgModule, ModuleWithProviders } from "@angular/core";
 import { PfGoogleMapComponent } from './google-map.component';
 import { GoogleMapsApiLoaderService, GOOGLE_MAPS_API_URL } from './google-maps-api-loader.service';
 import { ZoomControlDirective } from './controls/zoom-control.directive';
@@ -27,8 +27,6 @@ import { PolygonDirective } from './shapes/polygon.directive';
         CommonModule,
     ],
     providers: [
-        GoogleMapsApiLoaderService,
-        { provide: GOOGLE_MAPS_API_URL, useValue: "https://maps.googleapis.com/maps/api/js" },
         { provide: INFO_WINDOW_OPTIONS, useValue: DEFAULT_INFO_WINDOW_OPTIONS },
     ],
     exports: [
@@ -43,5 +41,15 @@ import { PolygonDirective } from './shapes/polygon.directive';
     ]
 })
 export class PfGoogleMapsModule {
+
+    static forRoot(apiKey: string): ModuleWithProviders {
+        return {
+            ngModule: PfGoogleMapsModule,
+            providers: [
+                GoogleMapsApiLoaderService,
+                { provide: GOOGLE_MAPS_API_URL, useValue: `https://maps.googleapis.com/maps/api/js?key=${apiKey}` },
+            ]
+        };
+    }
 
 }

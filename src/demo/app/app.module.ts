@@ -6,6 +6,7 @@ import { PfGoogleMapsModule } from 'pf-google-maps';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { ControlDebugComponent } from './debug/control-debug.component';
+import { environment } from '../environments/environment';
 
 @NgModule({
     declarations: [
@@ -16,7 +17,7 @@ import { ControlDebugComponent } from './debug/control-debug.component';
         BrowserModule,
         FormsModule,
         ReactiveFormsModule,
-        PfGoogleMapsModule,
+        PfGoogleMapsModule.forRoot(environment.googleApiKey),
     ],
     providers: [],
     bootstrap: [AppComponent]
