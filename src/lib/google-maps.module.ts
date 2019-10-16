@@ -28,7 +28,7 @@ import { PolygonDirective } from './shapes/polygon.directive';
     ],
     providers: [
         GoogleMapsApiLoaderService,
-        { provide: GOOGLE_MAPS_API_URL, useValue: "https://maps.googleapis.com/maps/api/js?key=AIzaSyCogIWnvcCoFBBCamk99sCyg8oCtKsZ2LE" },
+        { provide: GOOGLE_MAPS_API_URL, useValue: "https://maps.googleapis.com/maps/api/js" },
         { provide: INFO_WINDOW_OPTIONS, useValue: DEFAULT_INFO_WINDOW_OPTIONS },
     ],
     exports: [
