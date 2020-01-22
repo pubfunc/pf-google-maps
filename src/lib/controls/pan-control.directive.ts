@@ -1,10 +1,10 @@
-import { Directive, EventEmitter, forwardRef, Input, OnDestroy, OnInit, Output } from "@angular/core";
+import { Directive, forwardRef, Input, OnDestroy, OnInit } from "@angular/core";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { PfGoogleMapComponent } from '../google-map.component';
-import { Direction, isLatLngEqual, LatLng } from '../types/coordinates';
-import { PanEvent } from '../types/events';
+import { isLatLngEqual } from '../types/coordinates';
+import { Direction, LatLng } from '../types/common';
 
 
 
@@ -21,15 +21,6 @@ import { PanEvent } from '../types/events';
 })
 export class PanControlDirective implements OnInit, OnDestroy, ControlValueAccessor {
 
-    @Output('centerChange')
-    centerEmitter = new EventEmitter<PanEvent>();
-
-    @Input('center')
-    set center(center: LatLng){
-        this._parent.center = center;
-        this.emit(center);
-    }
-
     @Input('panDisabled')
     disabled = false;
 
@@ -42,26 +33,23 @@ export class PanControlDirective implements OnInit, OnDestroy, ControlValueAcces
     constructor(private _parent: PfGoogleMapComponent){}
 
     ngOnInit(){
-        // console.log('PanControlDirective: init');
-        this._parent.init
-            .subscribe(init => this.onMapInit())
+        this._parent
+        .panChangeEmitter
+        .pipe(takeUntil(this._destroy$))
+        .subscribe(event => {
+            if(!isLatLngEqual(this.value, event.center)){
+                // console.log('PanControlDirective: center change %o => %o', this.value, center);
+                this.value = event.center;
+                this._onChange(event.center);
+                this._onTouch();
+            }
+        });
     }
 
     ngOnDestroy(){
         // console.log('PanControlDirective: destroy');
         this._destroy$.next();
         this._destroy$.complete();
-    }
-
-    private onMapInit(){
-        this._parent.addCenterListener().pipe(takeUntil(this._destroy$)).subscribe(center => {
-            if(!isLatLngEqual(this.value, center)){
-                // console.log('PanControlDirective: center change %o => %o', this.value, center);
-                this.value = center;
-                this.emit(center);
-                this._onTouch();
-            }
-        });
     }
 
     writeValue(obj: any): void {
@@ -100,7 +88,7 @@ export class PanControlDirective implements OnInit, OnDestroy, ControlValueAcces
                 position.lng+=Number(value);
                     break;
         }
-        this.center = position;
+        this._parent.center = position;
     }
 
     panNorth(value: number = 1){ this.pan(value, Direction.NORTH) }
@@ -108,11 +96,6 @@ export class PanControlDirective implements OnInit, OnDestroy, ControlValueAcces
     panSouth(value: number = 1){ this.pan(value, Direction.SOUTH) }
     panWest(value: number = 1){ this.pan(value, Direction.WEST) }
 
-    private emit(center: LatLng){
-        this._onChange(center);
-        this.centerEmitter.emit(new PanEvent(center));
-        // console.log('PanControlDirective: emit %o', center);
-    }
 
 }
 

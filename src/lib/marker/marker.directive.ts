@@ -1,10 +1,13 @@
-import { Directive, forwardRef, Input, OnDestroy, OnInit, InjectionToken } from "@angular/core";
+import { Directive, forwardRef, InjectionToken, Input, NgZone, OnDestroy, OnInit } from "@angular/core";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { PfGoogleMapComponent } from '../google-map.component';
-import { isLatLngEqual, LatLng } from '../types/coordinates';
-import { MarkerOptions, MarkerAnimation } from '../types/google-map-literals';
+import { MVCEventManager } from '../mvc-event-manager';
 import { coerceNumber } from '../types/coerce';
+import { MarkerOptions, MarkerAnimation } from '../types/marker';
+import { LatLng } from '../types/common';
+import { isLatLngEqual } from '../types/coordinates';
 
 export const MARKER_OPTIONS = new InjectionToken<MarkerOptions>('DEFAULT_MARKER_OPTIONS');
 
@@ -33,44 +36,54 @@ export class MarkerDirective implements OnInit, OnDestroy, ControlValueAccessor 
         return this._position;
     }
 
+    @Input('title')
+    set title(title: string){
+        if(this._title !== title){
+            this._title = title;
+            if(this.marker) this.marker.setTitle(title);
+        }
+    }
+
+    @Input('label')
+    set label(label: string){
+        if(this._label !== label){
+            this._label = label;
+            if(this.marker) this.marker.setLabel(label);
+        }
+    }
+
     @Input('disabled')
     disabled = false;
 
     @Input()
     set animation(animation: number | string | MarkerAnimation){
 
-        console.log('MarkerDirective: set animation', animation);
-
-        switch(animation){
-            case 'none':
-                this._animation = MarkerAnimation.NONE;
-                break;
-            case 'bounce':
-                this._animation = MarkerAnimation.BOUNCE;
-                break;
-            case 'drop':
-                this._animation = MarkerAnimation.DROP;
-                break;
-            default:
-                this._animation = coerceNumber(animation, null);
-
+        if(animation !== this._animation){
+            this._animation = animation;
+            if(this.marker) {
+                console.log('MarkerDirective: set animation', this._coerceMarkerAnimation(animation));
+                this.marker.setAnimation(this._coerceMarkerAnimation(animation));
+            }
         }
-
-        if(this.marker) this.marker.setAnimation(google.maps.Animation.BOUNCE);
 
     }
 
     marker: google.maps.Marker;
 
-    // private _position$ = new BehaviorSubject<LatLng>(null);
-    private _animation: number = null;
-    private _position: LatLng = null;
+    private _animation: number | string | MarkerAnimation = null;
+    private _position: LatLng;
+    private _title: string;
+    private _label: string;
+
     private _destroy$ = new Subject<void>();
     private _onChange: any = ()=>{};
     private _onTouch:any = ()=>{};
+    private _eventManager = new MVCEventManager(this._ngZone);
 
-
-    constructor(private _parent: PfGoogleMapComponent){}
+    constructor(
+        private _parent: PfGoogleMapComponent,
+        private _ngZone: NgZone
+    ){}
 
     ngOnInit(){
         this._parent.init
@@ -84,7 +97,7 @@ export class MarkerDirective implements OnInit, OnDestroy, ControlValueAccessor 
         this._destroy$.complete();
 
         if(this.marker){
-            this.marker.unbindAll();
+            this._eventManager.clear();
             this.marker.setMap(null);
         }
 
@@ -111,28 +124,50 @@ export class MarkerDirective implements OnInit, OnDestroy, ControlValueAccessor 
 
         const map = this._parent.map;
 
-        this.marker = new google.maps.Marker({
-            map,
-            position: this._position,
-            draggable: true,
-            animation: google.maps.Animation.BOUNCE,
+        this._ngZone.runOutsideAngular(() => {
+            this.marker = new google.maps.Marker({
+                map,
+                position: this._position,
+                draggable: true,
+                animation: this._coerceMarkerAnimation(this._animation),
+                title: this._title,
+                label: this._label
+            });
+
+            this._eventManager.setSource(this.marker);
+            console.log('marker created', this.marker);
         });
 
-        this.marker.addListener('drag', (event: MouseEvent) => {
 
-            let pos = this.marker.getPosition().toJSON();
+        this._eventManager.getEmitter<MouseEvent>('drag')
+            .pipe(takeUntil(this._destroy$))
+            .subscribe(event => {
+                let pos = this.marker.getPosition().toJSON();
+                if(!isLatLngEqual(this._position, pos)){
+                    this._position = pos;
+                    this._onChange(pos);
+                }
+            });
 
-            if(!isLatLngEqual(this._position, pos)){
-                this._position = pos;
-                this._onChange(pos);
-            }
+        this._eventManager.getEmitter<MouseEvent>('dragend')
+            .pipe(takeUntil(this._destroy$))
+            .subscribe(event => {
+                this._onTouch();
+            });
 
-        });
+    }
 
-        this.marker.addListener('dragend', (event: MouseEvent) => {
-            this._onTouch();
-        });
-
+    private _coerceMarkerAnimation(animation: number | string | MarkerAnimation): google.maps.Animation {
+        switch(animation){
+            case 'none':
+                return null;
+            case 'bounce':
+                return google.maps.Animation.BOUNCE;
+            case 'drop':
+                return google.maps.Animation.DROP;
+            default:
+                return coerceNumber(animation, null);
+        }
     }
 
 }

@@ -1,11 +1,16 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewEncapsulation, ViewChild, Input } from "@angular/core";
-import { GoogleMapsApiLoaderService } from './google-maps-api-loader.service';
+import { Component, ElementRef, Input, NgZone, OnDestroy, OnInit, Output, ViewChild, ViewEncapsulation, InjectionToken } from "@angular/core";
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
-import { filter, map, switchMap, takeUntil, distinctUntilChanged, tap } from 'rxjs/operators';
-import { coerceNumber } from './types/coerce';
-import { LatLng } from './types/coordinates';
+import { filter, map } from 'rxjs/operators';
+import { GoogleMapsApiLoaderService } from './google-maps-api-loader.service';
+import { MVCEventManager } from './mvc-event-manager';
+import { LatLng } from './types/common';
+import { PanEvent, ZoomEvent } from './types/events';
+import { MapOptions } from './types/maps';
 
+export const MAP_OPTIONS = new InjectionToken<MapOptions>('DEFAULT_MAP_OPTIONS');
 
+export const DEFAULT_MAP_OPTIONS: MapOptions = {
+};
 
 @Component({
     selector: 'pf-google-map',
@@ -32,33 +37,40 @@ export class PfGoogleMapComponent implements OnInit, OnDestroy {
 
     @Input()
     set zoom(zoom: number){
-        this._zoom$.next(coerceNumber(zoom));
-    }
-    get zoom(){
-        return this._zoom$.getValue();
+        this._zoom = zoom;
+        if(this.map) this.map.setZoom(zoom);
     }
 
     @Input()
     set center(center: LatLng){
-        this._center$.next(center);
-    }
-    get center(){
-        return this._center$.getValue();
+        this._center = center;
+        if(this.map) this.map.setCenter(center);
     }
 
 
-    private _zoom$ = new BehaviorSubject<number>(8);
-    private _center$ = new BehaviorSubject<LatLng>({lat: -34.397, lng: 150.644});
+    private _zoom: number;
+    private _center: LatLng;
 
     private _destroy$ = new Subject<void>();
     private _init$ = new BehaviorSubject<boolean>(false);
+
+    private _eventManager = new MVCEventManager(this._ngZone);
+
+    @Output('zoomChange')
+    zoomChangeEmitter = this._eventManager.getEmitter('zoom_changed')
+                            .pipe(map(() => this._makeZoomEvent()));
+
+    @Output('panChange')
+    panChangeEmitter = this._eventManager.getEmitter('center_changed')
+                            .pipe(map(() => this._makePanEvent()));
 
     map: google.maps.Map;
     init: Observable<void>;
 
     constructor(
         private _apiLoader: GoogleMapsApiLoaderService,
-        private _hostEl: ElementRef
+        private _hostEl: ElementRef,
+        private _ngZone: NgZone,
     ){
         this.init = this._init$
             .pipe(
@@ -81,61 +93,34 @@ export class PfGoogleMapComponent implements OnInit, OnDestroy {
     }
 
     onApiInit(){
-        let map = this.map = new google.maps.Map(this.container.nativeElement, {
-            center: this._center$.getValue(),
-            zoom: this._zoom$.getValue(),
+
+        this._ngZone.runOutsideAngular(() => {
+            let map = this.map = new google.maps.Map(this.container.nativeElement, {
+                center: this._center,
+                zoom: this._zoom,
+            });
+            this._eventManager.setSource(map);
         });
 
-        this._zoom$.pipe(distinctUntilChanged()).subscribe(zoom => {
-            console.log('map set zoom', zoom);
-            map.setZoom(zoom);
-        });
-
-        this._center$.pipe(distinctUntilChanged()).subscribe(center => {
-            console.log('map set center', center);
-            map.setCenter(center);
-        });
     }
 
     ngOnDestroy(){
-        console.log('map destroy');
-        if(this.map) this.map.unbindAll();
+        this._eventManager.clear();
         this._init$.complete();
         this._destroy$.next();
         this._destroy$.complete();
     }
 
-    addZoomListener(){
-        return this.init.pipe(
-            switchMap(() => this.observeEvent('zoom_changed')),
-            map(() => this.map.getZoom())
-        );
+    private _makeZoomEvent(): ZoomEvent {
+        return {
+            zoom: this.map ? this.map.getZoom() : null,
+        };
     }
 
-    addCenterListener(){
-        return this.init.pipe(
-            switchMap(() => this.observeEvent('center_changed')),
-            // tap(() => console.log('center', this.map.getCenter())),
-            map((): LatLng => this.map.getCenter().toJSON())
-        );
-    }
-
-    private observeEvent(eventName: string): Observable<void>{
-        return new Observable(observer => {
-
-            let ref = this.map.addListener(eventName, (...args: any[]) => {
-                // console.log('fire', eventName);
-                observer.next();
-            });
-
-            console.log('listener added', eventName);
-
-            return () => {
-                console.log('listener removed', eventName);
-                google.maps.event.removeListener(ref);
-                observer.complete();
-            };
-        });
+    private _makePanEvent(): PanEvent {
+        return {
+            center: this.map ? this.map.getCenter().toJSON() : null
+        };
     }
 
 }

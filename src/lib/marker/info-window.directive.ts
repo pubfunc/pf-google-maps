@@ -1,7 +1,7 @@
 import { Directive, TemplateRef, ViewContainerRef, OnInit, EmbeddedViewRef, OnChanges, SimpleChanges, ChangeDetectorRef, Optional, ContentChild, OnDestroy, InjectionToken, Inject, Input } from "@angular/core";
 import { MarkerDirective } from './marker.directive';
 import { PfGoogleMapComponent } from '../google-map.component';
-import { InfoWindowOptions } from '../types/google-map-literals';
+import { InfoWindowOptions } from '../types/info-window';
 
 export const INFO_WINDOW_OPTIONS = new InjectionToken<InfoWindowOptions>('DEFAULT_INFO_WINDOW_OPTIONS');
 

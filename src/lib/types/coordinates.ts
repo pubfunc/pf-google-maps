@@ -1,9 +1,4 @@
-
-
-export interface LatLng {
-    lat: number;
-    lng: number;
-}
+import { LatLng } from './common';
 
 
 export function isLatLngEqual(a: LatLng, b: LatLng){
@@ -38,9 +33,3 @@ export function isLatLng(obj: any): obj is LatLng {
             && typeof obj.lng === "number";
 }
 
-export enum Direction {
-    NORTH,
-    EAST,
-    SOUTH,
-    WEST,
-}

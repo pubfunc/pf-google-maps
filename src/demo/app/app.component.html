@@ -3,7 +3,7 @@
       <pf-zoom-control *ngIf="isZoomActive" [(ngModel)]="zoom"></pf-zoom-control>
       <pf-pan-control *ngIf="isPanActive" [(ngModel)]="pan"></pf-pan-control>
 
-      <pf-marker *ngIf="isMarkerActive" [(ngModel)]="markerPosition" [animation]="markerAnimation">
+      <pf-marker *ngIf="isMarkerActive" [(ngModel)]="markerPosition" [animation]="markerAnimation" title="Marker with InfoWindow" label="123456">
 
           <pf-info-window *ngIf="isInfoWindowActive">
               <div *pfInfoTemplate style="max-width: 260px;">
@@ -22,6 +22,8 @@
 
 
       <pf-polygon [formControl]="polygonControl" [geodesic]="polygonGeodesic"></pf-polygon>
+
+      <pf-heatmap [data]="heatmapData"></pf-heatmap>
 
   </pf-google-map>
   <ng-template #nothingHere>

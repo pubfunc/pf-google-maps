@@ -1,4 +1,4 @@
-import { LatLng } from './coordinates';
+import { LatLng } from './common';
 
 export class ZoomEvent {
     constructor(public zoom: number){}

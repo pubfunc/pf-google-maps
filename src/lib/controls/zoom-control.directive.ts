@@ -1,10 +1,9 @@
-import { Directive, OnInit, Output, EventEmitter, Input, forwardRef, Component, OnDestroy } from "@angular/core";
-import { PfGoogleMapComponent } from '../google-map.component';
+import { Directive, forwardRef, Input, OnDestroy, OnInit } from "@angular/core";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
-import { coerceNumber } from '../types/coerce';
-import { ZoomEvent } from '../types/events';
-import { Subject, pipe } from 'rxjs';
+import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
+import { PfGoogleMapComponent } from '../google-map.component';
+import { coerceNumber } from '../types/coerce';
 
 
 
@@ -21,25 +20,7 @@ import { takeUntil } from 'rxjs/operators';
 })
 export class ZoomControlDirective implements OnInit, OnDestroy, ControlValueAccessor {
 
-    @Output('change')
-    zoomEmitter = new EventEmitter<ZoomEvent>();
-
-    @Input('value')
-    set zoom(zoom: number){
-
-        zoom = coerceNumber(zoom);
-
-        if(zoom !== this.value){
-            this.value = zoom;
-            if(!this.disabled) this._parent.zoom = zoom;
-            this.emit(zoom);
-        }
-    }
-    get zoom(){
-        return this.value;
-    }
-
-    @Input('disabled')
+    @Input('zoomDisabled')
     disabled = false;
 
     value: number;
@@ -51,26 +32,25 @@ export class ZoomControlDirective implements OnInit, OnDestroy, ControlValueAcce
     constructor(private _parent: PfGoogleMapComponent){}
 
     ngOnInit(){
-        this._parent.init
-            .subscribe(init => this.onMapInit())
-    }
-
-    private onMapInit(){
         this._parent
-            .addZoomListener()
+            .zoomChangeEmitter
             .pipe(takeUntil(this._destroy$))
-            .subscribe(zoom => {
+            .subscribe(event => {
+
+                console.log('ZoomControlDirective: zoom emit', event);
 
                 if(this.disabled) return;
 
-                if(this.value !== zoom){
-                    console.log('ZoomControlDirective: zoom change %o => %o', this.value, zoom);
-                    this.value = zoom;
-                    this.emit(zoom);
+                if(this.value !== event.zoom){
+                    console.log('ZoomControlDirective: zoom change %o => %o', this.value, event.zoom);
+                    this.value = event.zoom;
+                    this._onChange(event.zoom);
                     this._onTouch();
                 }
             });
     }
+
+
 
     ngOnDestroy(){
         this._destroy$.next();
@@ -97,17 +77,13 @@ export class ZoomControlDirective implements OnInit, OnDestroy, ControlValueAcce
     }
 
     increment(){
-        this.zoom++;
+        this.value++;
+        this._parent.zoom = this.value;
     }
 
     decrement(){
-        this.zoom--;
-    }
-
-    private emit(zoom: number){
-        this._onChange(zoom);
-        this.zoomEmitter.emit(new ZoomEvent(zoom));
-        console.log('ZoomControlDirective: emit %o', zoom);
+        this.value--;
+        this._parent.zoom = this.value;
     }
 
 }

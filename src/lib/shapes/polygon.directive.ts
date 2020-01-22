@@ -1,10 +1,12 @@
-import { Directive, forwardRef, InjectionToken, Input, OnDestroy, OnInit } from "@angular/core";
+import { Directive, forwardRef, InjectionToken, Input, NgZone, OnDestroy, OnInit } from "@angular/core";
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
+import { MVCEventManager } from '../mvc-event-manager';
 import { Subject } from 'rxjs';
 import { PfGoogleMapComponent } from '../google-map.component';
-import { isLatLngArrayEqual, LatLng } from '../types/coordinates';
-import { PolygonOptions } from '../types/google-map-literals';
+import { LatLng } from '../types/common';
+import { isLatLngArrayEqual } from '../types/coordinates';
 import { updateMVCArray } from '../types/mvc';
+import { PolygonOptions } from '../types/polygon';
 
 export const POLYGON_OPTIONS = new InjectionToken<PolygonOptions>('DEFAULT_POLYGON_OPTIONS');
 
@@ -54,9 +56,13 @@ export class PolygonDirective implements OnInit, OnDestroy, ControlValueAccessor
     private _destroy$ = new Subject<void>();
     private _onChange: any = () => { };
     private _onTouch: any = () => { };
+    private _eventManager = new MVCEventManager(this._ngZone);
 
 
-    constructor(private _parent: PfGoogleMapComponent) { }
+    constructor(
+        private _parent: PfGoogleMapComponent,
+        private _ngZone: NgZone,
+        ) { }
 
     ngOnInit() {
         this._parent.init
@@ -109,12 +115,16 @@ export class PolygonDirective implements OnInit, OnDestroy, ControlValueAccessor
             geodesic: this._geodesic,
         });
 
-        this.polyPath.addListener('remove_at', (index: number) => this.handlePathChange());
-        this.polyPath.addListener('insert_at', (index: number, removed: google.maps.LatLngLiteral) => this.handlePathChange());
-        this.polyPath.addListener('set_at', (index: number, prev: google.maps.LatLngLiteral) => this.handlePathChange());
-        // this.poly.addListener('dragend', (event: google.maps.PolyMouseEvent) => this._onTouch());
-        this.poly.addListener('mouseup', (event: google.maps.PolyMouseEvent) => this._onTouch());
+        this._eventManager.setSource(this.polyPath);
 
+        this._eventManager.getEmitter<number>('remove_at')
+            .subscribe(() => this.handlePathChange());
+        this._eventManager.getEmitter<number>('insert_at')
+            .subscribe(() => this.handlePathChange());
+        this._eventManager.getEmitter<number>('set_at')
+            .subscribe(() => this.handlePathChange());
+        this._eventManager.getEmitter<MouseEvent>('mouseup')
+            .subscribe(() => this._onTouch());
     }
 
     private handlePathChange() {

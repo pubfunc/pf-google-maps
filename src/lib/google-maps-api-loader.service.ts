@@ -2,7 +2,6 @@ import { Injectable, InjectionToken, Inject } from "@angular/core";
 
 export const GOOGLE_MAPS_API_URL = new InjectionToken<string>('Google maps API url');
 
-
 @Injectable()
 export class GoogleMapsApiLoaderService {
 
